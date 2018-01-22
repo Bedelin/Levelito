@@ -1,8 +1,15 @@
 package bottelegram;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.telegram.telegrambots.api.methods.send.SendMessage;
 import org.telegram.telegrambots.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.api.objects.Update;
@@ -34,38 +41,40 @@ public class Levelito extends TelegramLongPollingBot {
             if (update.getMessage().isCommand()) {//Control de comandos
 
                 String comando = update.getMessage().getText();
-                switch (comando) {
-                    case "/ayudaquedadas":
-                        mensaje.setText("Crear quedada: en SITIO, para DIA a las");
-                        break;
-                    case "/ayudaencuestas":
-                        mensaje.setText("Crear encuesta: DIA1, DIA2, DIA3...|| Crear encuesta HORA1, HORA2, HORA3...");
-                        break;
-                    case "/outofcontext":
-                        Random rand= new Random();
-                        int opcion=rand.nextInt(4);
-                        switch (opcion){
-                            case 0: 
-                                mensaje.setText("Y @Hirobyte dijo \"Toma anda, cómete esto\"");
-                                break;
-                            case 1:
-                                mensaje.setText("Y @Hirobyte dijo \"[..] tienes todo gigante. Tienes plátanos gigantes[...]\"");
-                                break;
-                            case 2:
-                                mensaje.setText("Y @Senixirabix dijo \"Tú come Bedy, tú come...\"");
-                                break;
-                            case 3:
-                                mensaje.setText("Y @Bedelin dijo \"Vamos a hacerlo, Jakub\"");
-                                break;
-                            case 4:
-                                mensaje.setText("Y @Senixirabix dijo \"Lo mejor es al natural\"");
-                                break;
+                if (comando.contains("ayudaquedadas")) {
+                    mensaje.setText("Crear quedada: en SITIO, para DIA a las");
+                } else if (comando.contains("/ayudaencuestas")) {
+                    mensaje.setText("Crear encuesta pregunta: PREGUNTA. Respuestas:  DIA1, DIA2, DIA3...|| Crear encuesta pregunta: PREGUNTA. Respuestas: HORA1, HORA2, HORA3...");
+                } else if (comando.contains("/outofcontext")) {
+                    Random rand = new Random();
+                    int opcion = rand.nextInt(10);
+                    try {
+                        File archivo = new File("C:\\" + update.getMessage().getChatId() + ".txt");
+                        FileReader fr;
+                        fr = new FileReader(archivo);
+                        BufferedReader br = new BufferedReader(fr);
+                        
+                        String linea;
+                        int cont=0;
+                        while ((linea=br.readLine())!=null){
+                            cont++;
+                            if (cont==opcion){break;}
                         }
+                        mensaje.setText(linea);
+                    } catch (FileNotFoundException ex) {
+                        System.out.println(ex);
+                    } catch (IOException ex) {
+                        System.out.println(ex);
+                    }
+                    
+
                 }
+
                 //CREACION DE QUEDADAS
             } else if (mensajeRecibido.indexOf("Crear quedada") == 0) {//Creación de quedadas
                 String datos = mensajeRecibido.split(": en")[1];
                 String[] datosSeparados = datos.split(", para");
+                System.out.println(datosSeparados[1]);
                 mensaje.setText("¡Gente! Quedamos en el " + datosSeparados[0] + " el día" + datosSeparados[1]);
 
                 //Hago las opciones del mensaje
@@ -73,7 +82,7 @@ public class Levelito extends TelegramLongPollingBot {
                 List<List<InlineKeyboardButton>> filas = new ArrayList<>();
                 List<InlineKeyboardButton> linea = new ArrayList<>();
 
-                linea.add(new InlineKeyboardButton().setText("Allé voy").setCallbackData("ir @" + usuario));
+                linea.add(new InlineKeyboardButton().setText("Allé voy").setCallbackData("yendo @" + usuario));
 
                 filas.add(linea);
                 markup.setKeyboard(filas);
@@ -82,15 +91,16 @@ public class Levelito extends TelegramLongPollingBot {
 
                 //CREACION DE ENCUESTAS
             } else if (mensajeRecibido.indexOf("Crear encuesta") == 0) {
-                String datos = mensajeRecibido.split(": ")[1];
-                String[] opciones = datos.split(", ");
+                String pregunta = mensajeRecibido.split("pregunta: ")[1].split("Respuesta: ")[0];
+                String[] opciones = mensajeRecibido.split("Respuestas: ")[1].split(", ");
+                System.out.println(pregunta);
 
                 //Hago las opciones del mensaje
                 InlineKeyboardMarkup markup = new InlineKeyboardMarkup();//creo que es la barra de opciones
                 List<List<InlineKeyboardButton>> filas = new ArrayList<>();
                 List<InlineKeyboardButton> linea = new ArrayList<>();
 
-                String textoMensaje = "¡Encuesta va! Elegid sabiamente. Ya han votado:";
+                String textoMensaje = "¡Encuesta va! Elegid sabiamente. " + pregunta + " Ya han votado:";
                 for (String s : opciones) {
                     linea.add(new InlineKeyboardButton().setText(s).setCallbackData("voto @" + usuario + "," + s));
                     textoMensaje = textoMensaje + "\r\n-" + s + ": 0";
@@ -100,8 +110,22 @@ public class Levelito extends TelegramLongPollingBot {
                 markup.setKeyboard(filas);
                 mensaje.setReplyMarkup(markup);
 
+                //Saludos
+            } else if (mensajeRecibido.contains("Buenos días @LevelitoBot") || mensajeRecibido.contains("Hola @LevelitoBot")) {
+
+                mensaje.setReplyToMessageId(update.getMessage().getMessageId());
+                mensaje.setText("Buenos días @" + usuario + ", tenga usted un buen dia.");
+
+                //El puto amo
+            } else if (mensajeRecibido.contains("@LevelitoBot") && mensajeRecibido.contains("el puto amo")) {
+                mensaje.setReplyToMessageId(update.getMessage().getMessageId());
+                mensaje.setText("Muchas gracias @" + usuario + ", gracias a decirme cosas tan bonitas hacen que merezca la pena ser vuestro esclavo.");
+
             } else if (isGay(mensajeRecibido)) {//Jakub gay
                 mensaje.setText("@" + usuario + ", ¿estás seguro? No apostaría por ello.");
+            } //Es un dios
+            else if (mensajeRecibido.equals("Dios")) {
+                mensaje.setText("@" + usuario + ", ¿me estás llamando? Aquí estoy");
             }
 
             try {
@@ -109,10 +133,12 @@ public class Levelito extends TelegramLongPollingBot {
             } catch (TelegramApiException ex) {
                 System.out.println(ex);
             }
+
+            //Edita las respuestas a botones
         } else if (update.hasCallbackQuery()) {
 
-            String callData = update.getCallbackQuery().getData();
-            String user = callData.split("@")[1];
+            //Preparo variables varias que utilizaré en cualquier caso
+            String user = update.getCallbackQuery().getFrom().getUserName();
             long chatID = update.getCallbackQuery().getMessage().getChatId();
             int mensajeID = update.getCallbackQuery().getMessage().getMessageId();
 
@@ -120,10 +146,11 @@ public class Levelito extends TelegramLongPollingBot {
             mensajeEditado.setChatId(chatID);
             mensajeEditado.setMessageId(mensajeID);
 
-            if (update.getCallbackQuery().getData().contains("ir")) {
+            //ir a las quedadas
+            if (update.getCallbackQuery().getData().contains("yendo")) {
                 if (update.getCallbackQuery().getMessage().getText().contains(user)) {
                     String mensajeNuevo = update.getCallbackQuery().getMessage().getText();
-                    mensajeNuevo = mensajeNuevo.replaceAll("⭕ @" + user, "");
+                    mensajeNuevo = mensajeNuevo.replaceAll("\n⭕ @" + user, "");
                     mensajeEditado.setText(mensajeNuevo);
                 } else {
                     mensajeEditado.setText(update.getCallbackQuery().getMessage().getText() + "\r\n⭕ @" + user);
@@ -133,17 +160,19 @@ public class Levelito extends TelegramLongPollingBot {
                 List<List<InlineKeyboardButton>> filas = new ArrayList<>();
                 List<InlineKeyboardButton> linea = new ArrayList<>();
 
-                linea.add(new InlineKeyboardButton().setText("Allé voy").setCallbackData("ir @" + user));
+                linea.add(new InlineKeyboardButton().setText("Allé voy").setCallbackData("yendo @" + user));
 
                 filas.add(linea);
                 markup.setKeyboard(filas);
                 mensajeEditado.setReplyMarkup(markup);
 
+                //La actu de las votaciones
             } else if (update.getCallbackQuery().getData().contains("voto")) {
-                String votante = user.split(",")[0];
                 String texto = update.getCallbackQuery().getMessage().getText().split("-")[0];
-                if (!texto.contains(votante)) {
-                    texto = texto + "⭕ @" + votante;
+
+                if (!texto.contains(user)) {
+                    texto = texto + "⭕ @" + user;
+                    System.out.println(texto);
                     String[] opciones = update.getCallbackQuery().getMessage().getText().split("-");
                     ArrayList<Integer> votos = new ArrayList<>();
 
@@ -153,13 +182,16 @@ public class Levelito extends TelegramLongPollingBot {
 
                     for (int i = 1; i < opciones.length; i++) {
                         String opcionDeTurno = opciones[i].split(": ")[0];
+                        System.out.println(opcionDeTurno);
                         Integer votoSacado = Integer.parseInt(String.valueOf(opciones[i].split(": ")[1].charAt(0)));
-                        System.out.println(opciones[i]);
-                        if (user.split(",")[1].equals(opcionDeTurno)) {
+                        System.out.println(votoSacado);
+
+                        if (update.getCallbackQuery().getData().split(",")[1].equals(opcionDeTurno)) {
                             votoSacado++;
+                            //texto=texto+": "+opcionDeTurno;
                         }
                         votos.add(votoSacado);
-                        texto = texto + "\r\n" + opcionDeTurno + ": " + votos.get(i - 1);
+                        texto = texto + "\r\n-" + opcionDeTurno + ": " + votos.get(i - 1);
                         linea.add(new InlineKeyboardButton().setText(opcionDeTurno).setCallbackData("voto @" + user + "," + opcionDeTurno));
                     }
 
@@ -167,6 +199,8 @@ public class Levelito extends TelegramLongPollingBot {
                     filas.add(linea);
                     markup.setKeyboard(filas);
                     mensajeEditado.setReplyMarkup(markup);
+                    //PinChatMessage pin = new PinChatMessage(update.getCallbackQuery().getMessage().getChatId(), update.getCallbackQuery().getMessage().getMessageId());
+
                 }
             }
             try {
@@ -185,12 +219,8 @@ public class Levelito extends TelegramLongPollingBot {
 
     public boolean isGay(String texto) {
         String textoMin = texto.toLowerCase();
-        String gay = "sorry, no gay";
-        String gay2 = "sorry no gay";
-        String gay3 = "sory no gay";
-        String gay4 = "sorry no gai";
-        String gay5 = "sory no gai";
 
-        return textoMin.equals(gay) || textoMin.equals(gay2) || textoMin.equals(gay3) || textoMin.equals(gay4) || textoMin.equals(gay5);
+        return textoMin.contains("sorry") && textoMin.contains("no") && textoMin.contains("gay")
+                || (textoMin.contains("lo siento") && textoMin.contains("no") && textoMin.contains("homosexual"));
     }
 }
