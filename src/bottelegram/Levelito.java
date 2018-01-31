@@ -8,8 +8,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.telegram.telegrambots.api.methods.send.SendMessage;
 import org.telegram.telegrambots.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.api.objects.Update;
@@ -22,7 +20,7 @@ public class Levelito extends TelegramLongPollingBot {
 
     @Override
     public String getBotToken() {
-        return "512586030:AAEaf0i6s_KglDeyYuASxAeoqfptgMhjOko";
+        //
     }
 
     @Override
@@ -40,77 +38,16 @@ public class Levelito extends TelegramLongPollingBot {
 
             if (update.getMessage().isCommand()) {//Control de comandos
 
-                String comando = update.getMessage().getText();
-                if (comando.contains("ayudaquedadas")) {
-                    mensaje.setText("Crear quedada: en SITIO, para DIA a las");
-                } else if (comando.contains("/ayudaencuestas")) {
-                    mensaje.setText("Crear encuesta pregunta: PREGUNTA. Respuestas:  DIA1, DIA2, DIA3...|| Crear encuesta pregunta: PREGUNTA. Respuestas: HORA1, HORA2, HORA3...");
-                } else if (comando.contains("/outofcontext")) {
-                    Random rand = new Random();
-                    int opcion = rand.nextInt(10);
-                    try {
-                        File archivo = new File("C:\\" + update.getMessage().getChatId() + ".txt");
-                        FileReader fr;
-                        fr = new FileReader(archivo);
-                        BufferedReader br = new BufferedReader(fr);
-                        
-                        String linea;
-                        int cont=0;
-                        while ((linea=br.readLine())!=null){
-                            cont++;
-                            if (cont==opcion){break;}
-                        }
-                        mensaje.setText(linea);
-                    } catch (FileNotFoundException ex) {
-                        System.out.println(ex);
-                    } catch (IOException ex) {
-                        System.out.println(ex);
-                    }
-                    
+                mensaje = responderComando(mensajeRecibido, chatID);
 
-                }
-
-                //CREACION DE QUEDADAS
             } else if (mensajeRecibido.indexOf("Crear quedada") == 0) {//Creación de quedadas
-                String datos = mensajeRecibido.split(": en")[1];
-                String[] datosSeparados = datos.split(", para");
-                System.out.println(datosSeparados[1]);
-                mensaje.setText("¡Gente! Quedamos en el " + datosSeparados[0] + " el día" + datosSeparados[1]);
 
-                //Hago las opciones del mensaje
-                InlineKeyboardMarkup markup = new InlineKeyboardMarkup();//creo que es la barra de opciones
-                List<List<InlineKeyboardButton>> filas = new ArrayList<>();
-                List<InlineKeyboardButton> linea = new ArrayList<>();
+                mensaje = generarQuedada(mensajeRecibido, usuario);
 
-                linea.add(new InlineKeyboardButton().setText("Allé voy").setCallbackData("yendo @" + usuario));
+            } else if (mensajeRecibido.indexOf("Crear encuesta") == 0) {//Creación de encuestas
 
-                filas.add(linea);
-                markup.setKeyboard(filas);
+                mensaje = generarEncuesta(mensajeRecibido, usuario);
 
-                mensaje.setReplyMarkup(markup);
-
-                //CREACION DE ENCUESTAS
-            } else if (mensajeRecibido.indexOf("Crear encuesta") == 0) {
-                String pregunta = mensajeRecibido.split("pregunta: ")[1].split("Respuesta: ")[0];
-                String[] opciones = mensajeRecibido.split("Respuestas: ")[1].split(", ");
-                System.out.println(pregunta);
-
-                //Hago las opciones del mensaje
-                InlineKeyboardMarkup markup = new InlineKeyboardMarkup();//creo que es la barra de opciones
-                List<List<InlineKeyboardButton>> filas = new ArrayList<>();
-                List<InlineKeyboardButton> linea = new ArrayList<>();
-
-                String textoMensaje = "¡Encuesta va! Elegid sabiamente. " + pregunta + " Ya han votado:";
-                for (String s : opciones) {
-                    linea.add(new InlineKeyboardButton().setText(s).setCallbackData("voto @" + usuario + "," + s));
-                    textoMensaje = textoMensaje + "\r\n-" + s + ": 0";
-                }
-                mensaje.setText(textoMensaje);
-                filas.add(linea);
-                markup.setKeyboard(filas);
-                mensaje.setReplyMarkup(markup);
-
-                //Saludos
             } else if (mensajeRecibido.contains("Buenos días @LevelitoBot") || mensajeRecibido.contains("Hola @LevelitoBot")) {
 
                 mensaje.setReplyToMessageId(update.getMessage().getMessageId());
@@ -118,24 +55,27 @@ public class Levelito extends TelegramLongPollingBot {
 
                 //El puto amo
             } else if (mensajeRecibido.contains("@LevelitoBot") && mensajeRecibido.contains("el puto amo")) {
+                
                 mensaje.setReplyToMessageId(update.getMessage().getMessageId());
                 mensaje.setText("Muchas gracias @" + usuario + ", gracias a decirme cosas tan bonitas hacen que merezca la pena ser vuestro esclavo.");
 
             } else if (isGay(mensajeRecibido)) {//Jakub gay
+                
                 mensaje.setText("@" + usuario + ", ¿estás seguro? No apostaría por ello.");
-            } //Es un dios
-            else if (mensajeRecibido.equals("Dios")) {
+                
+            }else if (mensajeRecibido.equals("Dios")) {//Es un dios
+                
                 mensaje.setText("@" + usuario + ", ¿me estás llamando? Aquí estoy");
+                
             }
-
             try {
                 execute(mensaje);//envia el mensaje
             } catch (TelegramApiException ex) {
                 System.out.println(ex);
             }
 
-            //Edita las respuestas a botones
-        } else if (update.hasCallbackQuery()) {
+            
+        } else if (update.hasCallbackQuery()) {//Edita los mensajes con botones al recibir algo de uno de ellos
 
             //Preparo variables varias que utilizaré en cualquier caso
             String user = update.getCallbackQuery().getFrom().getUserName();
@@ -222,5 +162,95 @@ public class Levelito extends TelegramLongPollingBot {
 
         return textoMin.contains("sorry") && textoMin.contains("no") && textoMin.contains("gay")
                 || (textoMin.contains("lo siento") && textoMin.contains("no") && textoMin.contains("homosexual"));
+    }
+
+    //El generador de respuestas de comandos
+    public SendMessage responderComando(String comando, long chatID) {
+
+        SendMessage mensaje = new SendMessage();
+
+        if (comando.contains("ayudaquedadas")) {
+            mensaje.setText("Crear quedada: en SITIO, para DIA a las");
+
+        } else if (comando.contains("/ayudaencuestas")) {
+            mensaje.setText("Crear encuesta pregunta: PREGUNTA. Respuestas:  DIA1, DIA2, DIA3...|| Crear encuesta pregunta: PREGUNTA. Respuestas: HORA1, HORA2, HORA3...");
+
+        } else if (comando.contains("/outofcontext")) {
+            Random rand = new Random();
+            int opcion = rand.nextInt(10);
+            try {
+                File archivo = new File("C:\\" + chatID + ".txt");
+                FileReader fr;
+                fr = new FileReader(archivo);
+                BufferedReader br = new BufferedReader(fr);
+
+                String linea;
+                int cont = 0;
+                while ((linea = br.readLine()) != null) {
+                    cont++;
+                    if (cont == opcion) {
+                        break;
+                    }
+                }
+                mensaje.setText(linea);
+            } catch (FileNotFoundException ex) {
+                System.out.println(ex);
+            } catch (IOException ex) {
+                System.out.println(ex);
+            }
+
+        }
+        return mensaje;
+    }
+
+    public SendMessage generarQuedada(String mensajeRecibido, String usuario) {
+
+        SendMessage mensaje = new SendMessage();
+
+        String datos = mensajeRecibido.split(": en")[1];
+        String[] datosSeparados = datos.split(", para");
+        System.out.println(datosSeparados[1]);
+        mensaje.setText("¡Gente! Quedamos en el " + datosSeparados[0] + " el día" + datosSeparados[1]);
+
+        //Hago las opciones del mensaje
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();//creo que es la barra de opciones
+        List<List<InlineKeyboardButton>> filas = new ArrayList<>();
+        List<InlineKeyboardButton> linea = new ArrayList<>();
+
+        linea.add(new InlineKeyboardButton().setText("Allé voy").setCallbackData("yendo @" + usuario));
+
+        filas.add(linea);
+        markup.setKeyboard(filas);
+
+        mensaje.setReplyMarkup(markup);
+
+        return mensaje;
+
+    }
+
+    public SendMessage generarEncuesta(String mensajeRecibido, String usuario) {
+
+        SendMessage mensaje = new SendMessage();
+
+        String pregunta = mensajeRecibido.split("pregunta: ")[1].split("Respuesta: ")[0];
+        String[] opciones = mensajeRecibido.split("Respuestas: ")[1].split(", ");
+        System.out.println(pregunta);
+
+        //Hago las opciones del mensaje
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();//creo que es la barra de opciones
+        List<List<InlineKeyboardButton>> filas = new ArrayList<>();
+        List<InlineKeyboardButton> linea = new ArrayList<>();
+
+        String textoMensaje = "¡Encuesta va! Elegid sabiamente. " + pregunta + " Ya han votado:";
+        for (String s : opciones) {
+            linea.add(new InlineKeyboardButton().setText(s).setCallbackData("voto @" + usuario + "," + s));
+            textoMensaje = textoMensaje + "\r\n-" + s + ": 0";
+        }
+        mensaje.setText(textoMensaje);
+        filas.add(linea);
+        markup.setKeyboard(filas);
+        mensaje.setReplyMarkup(markup);
+
+        return mensaje;
     }
 }
